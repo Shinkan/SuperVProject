@@ -21,6 +21,7 @@ namespace CsClient
             }
         }
         private enum Orientation { north, south, east, west };
+        private static int[][] worldMap;
 
         static AgentAPI agentTomek;
         static int energy;
@@ -30,6 +31,7 @@ namespace CsClient
         static int doceloweHeight;
         static int obecneHeight = 0;
         static Orientation orientation;
+        static int mapWidth = 0;
 
         static void Listen(String a, String s) {
             if(a == "superktos") Console.WriteLine("~Słysze własne słowa~");
@@ -83,7 +85,6 @@ namespace CsClient
 
                     energy = cennikSwiata.initialEnergy;
                     Alive();
-                    //KeyReader();
                     agentTomek.Disconnect();
                     Console.ReadKey();
                     break;
@@ -113,7 +114,7 @@ namespace CsClient
                 Console.WriteLine("Moja energia: " + energy);
                 if (energy == 0)
                     alive = false;
-                Thread.Sleep(1000);
+                Thread.Sleep(2000);
             }
         }
 
@@ -121,6 +122,7 @@ namespace CsClient
         {
         }
 
+        #region wyszukiwanieEnergii
         static void Szukaj()
         {
             Look();
@@ -131,67 +133,110 @@ namespace CsClient
                     TravelToSource(unfinityEnergyField_1.locationX, unfinityEnergyField_1.locationY);
                     unfinityEnergyField_1.visited = true;
                 }
-            }
-            else if (unfinityEnergyField_2.found)
-            {
-                if (!unfinityEnergyField_2.visited)
+
+                else if (unfinityEnergyField_2.found)
                 {
                     TravelToSource(unfinityEnergyField_2.locationX, unfinityEnergyField_2.locationY);
                     unfinityEnergyField_2.visited = true;
+                    MakeMap();
+                }
+                else
+                    TravelSouth();
+            }
+            else
+                TravelNorth();                    
+        }
+
+        //Zmierza na polnocny zachod
+        static void TravelNorth()
+        {
+            if (orientation == Orientation.north)
+            {
+                if (!StepForward())
+                {
+                    RotateLeft();
+                    GoRight();
                 }
             }
             else
             {
-                if(!unfinityEnergyField_1.found)
-                    TravelNorth();
-                else
-                    TravelSouth();
-            }
-        }
-
-        static void TravelNorth()
-        {
-            while (!StepForward())
-            {
-                RotateLeft();
-                if (orientation == Orientation.south)
-                {
-                    OrientedField[] pola = agentTomek.Look();
-                    foreach (OrientedField pole in pola)
+                if (!GoRight())
+                    if (!StepForward())
                     {
-                        if (pole.x == -1 && pole.y == 1)
-                            if (pole.IsStepable())
-                            {
-                                StepForward();
-                                RotateLeft();
-                            }
-                        break;
+                        RotateLeft();
+                        GoRight();
                     }
-                }
             }
         }
+        //Zmierza na poludniowy zachod
         static void TravelSouth()
         {
-            while (!StepForward())
+            if (orientation == Orientation.south)
             {
-                RotateLeft();
-                if (orientation == Orientation.north)
+                if (!StepForward())
                 {
-                    OrientedField[] pola = agentTomek.Look();
-                    foreach (OrientedField pole in pola)
+                    RotateRight();
+                    GoLeft();
+                }
+                else
+                    mapWidth++;
+            }
+            else
+            {
+                if (!GoLeft())
+                {
+                    if (!StepForward())
                     {
-                        if (pole.x == -1 && pole.y == 1)
-                            if (pole.IsStepable())
-                            {
-                                StepForward();
-                                RotateLeft();
-                            }
-                        break;
+                        RotateRight();
+                        GoLeft();
+                    }
+                    else
+                    {
+                        if (orientation == Orientation.north)
+                            mapWidth--;
                     }
                 }
             }
         }
+        
+        //Sprawdza czy po przekatnej na prawo moze stanac i staje przed tym polem
+        static bool GoRight()
+        {
+            OrientedField[] pola = agentTomek.Look();
+            foreach (OrientedField pole in pola)
+            {
+                if (pole.x == 1 && pole.y == 1)
+                    if (pole.IsStepable())
+                        if (StepForward())
+                        {
+                            RotateRight();
+                            return true;
+                        }
+            }
+            return false;
+        }
+        //Sprawdza czy po przekatnej na lewo moze stanac i staje przed tym polem
+        static bool GoLeft()
+        {
+            OrientedField[] pola = agentTomek.Look();
+            foreach (OrientedField pole in pola)
+            {
+                if (pole.x == 1 && pole.y == 1)
+                    if (pole.IsStepable())
+                        if (StepForward())
+                        {
+                            if (orientation == Orientation.north)
+                                mapWidth--;
+                            if (orientation == Orientation.south)
+                                mapWidth++;
+                            RotateRight();
+                            return true;
+                        }
+            }
+            return false;
+        }
 
+        //Podaza do znalezionego zrodla energii
         static void TravelToSource(int x, int y)
         {
             if (x == 1 || x == -1)
@@ -223,35 +268,18 @@ namespace CsClient
                 //unsupported for |x|=>2
             }
             while (Recharge() != 0) ;
+            Console.WriteLine("Ładowanie zakończone");
         }
+        static void MakeMap()
+        {
+            worldMap = new int[mapWidth][];
+            for (int i = 0; i < mapWidth; i++)
+                worldMap[i] = new int[mapWidth];
+            //dodanie pol
+        }
+        #endregion
 
-        /*static void KeyReader() {
-            bool loop = true;
-            while(loop) {
-                Console.WriteLine("Moja energia: " + energy);
-                switch(Console.ReadKey().Key) {
-                    case ConsoleKey.Spacebar: Look();
-                        break;
-                    case ConsoleKey.R: Recharge();
-                        break;
-                    case ConsoleKey.UpArrow: StepForward();
-                        break;
-                    case ConsoleKey.LeftArrow: RotateLeft();
-                        break;
-                    case ConsoleKey.RightArrow: RotateRight();
-                        break;
-                    case ConsoleKey.Enter: Speak();
-                        break;
-                    case ConsoleKey.Q: loop = false;
-                        break;
-                    case ConsoleKey.D: agentTomek.Disconnect();
-                        break;
-                    default: Console.Beep();
-                        break;
-                }
-            }
-        }*/
-    #region moving
+        #region akcjeAgenta
         private static int Recharge()
         {
             int added = agentTomek.Recharge();
@@ -349,6 +377,10 @@ namespace CsClient
                         {
                             unfinityEnergyField_1.found = true;
                             unfinityEnergyField_1.Point(pole.x, pole.y);
+                            if (orientation == Orientation.north)
+                                mapWidth -= pole.y;
+                            else
+                                mapWidth -= pole.x;
                         }
                         else if (!unfinityEnergyField_2.found)
                         {
@@ -369,23 +401,5 @@ namespace CsClient
             }
         }
     #endregion
-        /*private static void Look()
-        {
-            OrientedField[] pola = agentTomek.Look();
-            foreach (OrientedField pole in pola)
-            {
-                Console.WriteLine("-----------------------------");
-                Console.WriteLine("POLE " + pole.x + "," + pole.y);
-                Console.WriteLine("Wysokosc: " + pole.height);
-                if (pole.energy != 0)
-                    Console.WriteLine("Energia: " + pole.energy);
-                if (pole.obstacle)
-                    Console.WriteLine("Przeszkoda");
-                if (pole.agent != null)
-                    Console.WriteLine("Agent " + pole.agent.fullName + " i jest obrocony na " + pole.agent.direction.ToString());
-                Console.WriteLine("-----------------------------");
-            }
-        }*/
-        
     }
 }
