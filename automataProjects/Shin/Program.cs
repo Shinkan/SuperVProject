@@ -32,6 +32,8 @@ namespace CsClient
         static int obecneHeight = 0;
         static Orientation orientation;
         static int mapWidth = 0;
+        static int locationX;
+        static int locationY;
 
         static void Listen(String a, String s) {
             if(a == "superktos") Console.WriteLine("~Słysze własne słowa~");
@@ -56,16 +58,16 @@ namespace CsClient
                 if (groupname == null)
                 {
                     Console.Write("Podaj nazwe druzyny: ");
-                    groupname = Console.ReadLine();
+                    groupname = "VGrupaX";// Console.ReadLine();
                 }
                 if (grouppass == null)
                 {
                     Console.Write("Podaj haslo: ");
-                    grouppass = Console.ReadLine();
+                    grouppass = "qvmlmo"; //Console.ReadLine();
                 }
 
                 Console.Write("Podaj nazwe swiata: ");
-                String worldname = Console.ReadLine();
+                String worldname = "VGrupaX"; //Console.ReadLine();
                     
                 Console.Write("Podaj imie: ");    
                 String imie = Console.ReadLine();
@@ -110,7 +112,8 @@ namespace CsClient
             {
                 if (!unfinityEnergyField_1.found || !unfinityEnergyField_2.found)
                     Szukaj();
-                Zwiedzaj();
+                else
+                    Zwiedzaj();
                 Console.WriteLine("Moja energia: " + energy);
                 if (energy == 0)
                     alive = false;
@@ -120,6 +123,7 @@ namespace CsClient
 
         static void Zwiedzaj()
         {
+            Console.WriteLine("Zwiedza");
         }
 
         #region wyszukiwanieEnergii
@@ -187,7 +191,7 @@ namespace CsClient
                 {
                     if (!StepForward())
                     {
-                        RotateRight();
+                        RotateLeft();
                         GoLeft();
                     }
                     else
@@ -221,7 +225,7 @@ namespace CsClient
             OrientedField[] pola = agentTomek.Look();
             foreach (OrientedField pole in pola)
             {
-                if (pole.x == 1 && pole.y == 1)
+                if (pole.x == -1 && pole.y == 1)
                     if (pole.IsStepable())
                         if (StepForward())
                         {
@@ -229,7 +233,7 @@ namespace CsClient
                                 mapWidth--;
                             if (orientation == Orientation.south)
                                 mapWidth++;
-                            RotateRight();
+                            RotateLeft();
                             return true;
                         }
             }
@@ -378,14 +382,23 @@ namespace CsClient
                             unfinityEnergyField_1.found = true;
                             unfinityEnergyField_1.Point(pole.x, pole.y);
                             if (orientation == Orientation.north)
+                            {
                                 mapWidth -= pole.y;
+                                locationX = Math.Abs(pole.x);
+                                locationY = pole.y;
+                            }
                             else
+                            {
                                 mapWidth -= pole.x;
+                                locationX = pole.y;
+                                locationY = pole.x;
+                            }
                         }
                         else if (!unfinityEnergyField_2.found)
                         {
-                            if (unfinityEnergyField_2.locationX != unfinityEnergyField_1.locationX
-                                && unfinityEnergyField_2.locationY != unfinityEnergyField_1.locationY)
+                            //Poprawic to (orientacja ma wplyw na polozenie)
+                            if ((unfinityEnergyField_2.locationX - locationX) !=0
+                                && (unfinityEnergyField_2.locationY - locationY !=0))
                             {
                                 unfinityEnergyField_2.found = true;
                                 unfinityEnergyField_2.Point(pole.x, pole.y);
