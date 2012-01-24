@@ -2,11 +2,14 @@
 using Data.Realm;
 using Data;
 using System.Threading;
+using AIMLbot;
+using AIMLbot.Utils;
 
 namespace CsClient
 {
     public class Program
     {
+
         private struct UnfinityEnergy
         {
             public bool found;
@@ -34,6 +37,9 @@ namespace CsClient
         static int mapWidth = 0;
         static int locationX;
         static int locationY;
+        static String[][] lookMatrix;
+        static int lookMatrixW;
+        static bool mapMaking;
 
         static void Listen(String a, String s) {
             if(a == "superktos") Console.WriteLine("~Słysze własne słowa~");
@@ -86,6 +92,11 @@ namespace CsClient
                     Console.WriteLine(cennikSwiata.speakCost + " - Koszt mówienia");
 
                     energy = cennikSwiata.initialEnergy;
+                    lookMatrixW = cennikSwiata.sightScope;
+                    lookMatrixW = lookMatrixW * lookMatrixW + 1;
+                    lookMatrix = new String[lookMatrixW][];
+                    for (int i = 0; i < lookMatrixW; i++)
+                        lookMatrix[i] = new String[lookMatrixW];
                     Alive();
                     agentTomek.Disconnect();
                     Console.ReadKey();
@@ -107,6 +118,7 @@ namespace CsClient
 
         static void Alive() {
             bool alive = true;
+            mapMaking = false;
             orientation = Orientation.north;
             while (alive)
             {
@@ -117,13 +129,16 @@ namespace CsClient
                 Console.WriteLine("Moja energia: " + energy);
                 if (energy == 0)
                     alive = false;
-                Thread.Sleep(2000);
+                Thread.Sleep(1000);
             }
         }
 
         static void Zwiedzaj()
         {
             Console.WriteLine("Zwiedza");
+            if (!StepForward())
+                if (!GoRight())
+                    RotateRight();
         }
 
         #region wyszukiwanieEnergii
@@ -136,12 +151,15 @@ namespace CsClient
                 {
                     TravelToSource(unfinityEnergyField_1.locationX, unfinityEnergyField_1.locationY);
                     unfinityEnergyField_1.visited = true;
+                    Console.WriteLine("Osiagnieto pierwsze zrodlo energii");
+                    mapMaking = true;
                 }
 
                 else if (unfinityEnergyField_2.found)
                 {
                     TravelToSource(unfinityEnergyField_2.locationX, unfinityEnergyField_2.locationY);
                     unfinityEnergyField_2.visited = true;
+                    Console.WriteLine("Osiagnieto drugie zrodlo energii");
                     MakeMap();
                 }
                 else
@@ -177,27 +195,23 @@ namespace CsClient
         {
             if (orientation == Orientation.south)
             {
-                if (!StepForward())
-                {
-                    RotateRight();
-                    GoLeft();
-                }
-                else
-                    mapWidth++;
-            }
-            else
-            {
-                if (!GoLeft())
+                if (!GoRight())
                 {
                     if (!StepForward())
                     {
                         RotateLeft();
-                        GoLeft();
+                        GoRight();
                     }
-                    else
+                }
+            }
+            else
+            {
+                if (!GoRight())
+                {
+                    if (!StepForward())
                     {
-                        if (orientation == Orientation.north)
-                            mapWidth--;
+                        RotateLeft();
+                        GoRight();
                     }
                 }
             }
@@ -229,10 +243,6 @@ namespace CsClient
                     if (pole.IsStepable())
                         if (StepForward())
                         {
-                            if (orientation == Orientation.north)
-                                mapWidth--;
-                            if (orientation == Orientation.south)
-                                mapWidth++;
                             RotateLeft();
                             return true;
                         }
@@ -269,16 +279,123 @@ namespace CsClient
             }
             else
             {
-                //unsupported for |x|=>2
+                if (x == -2)
+                {
+                    if (StepForward())
+                    {
+                        RotateLeft();
+                        StepForward();
+                        if (StepForward())
+                        {
+                            RotateRight();
+                            StepForward();
+                        }
+                        else
+                        {
+                            RotateRight();
+                            if (StepForward())
+                            {
+                                RotateLeft();
+                                StepForward();
+                            }
+                            else
+                                return;
+
+                        }
+                    }
+                    else
+                    {
+                        RotateLeft();
+                        if (StepForward())
+                        {
+                            RotateRight();
+                            StepForward();
+                            if(StepForward())
+                            {
+                                    RotateLeft();
+                                    StepForward();
+                            }
+                            else
+                            {
+                                RotateLeft();
+                                if (StepForward())
+                                {
+                                    RotateRight();
+                                    StepForward();
+                                }
+                                else
+                                    return;
+                            }
+                        }
+                        else
+                            return;
+                    }
+                }
+                else
+                {
+                    if (StepForward())
+                    {
+                        RotateRight();
+                        StepForward();
+                        if (StepForward())
+                        {
+                            RotateLeft();
+                            StepForward();
+                        }
+                        else
+                        {
+                            RotateLeft();
+                            if (StepForward())
+                            {
+                                RotateRight();
+                                StepForward();
+                            }
+                            else
+                                return;
+
+                        }
+                    }
+                    else
+                    {
+                        RotateRight();
+                        if (StepForward())
+                        {
+                            RotateLeft();
+                            StepForward();
+                            if (StepForward())
+                            {
+                                RotateRight();
+                                StepForward();
+                            }
+                            else
+                            {
+                                RotateRight();
+                                if (StepForward())
+                                {
+                                    RotateLeft();
+                                    StepForward();
+                                }
+                                else
+                                    return;
+                            }
+                        }
+                        else
+                            return;
+                    }
+                }
             }
             while (Recharge() != 0) ;
             Console.WriteLine("Ładowanie zakończone");
         }
+
         static void MakeMap()
         {
+            mapMaking = false;
             worldMap = new int[mapWidth][];
             for (int i = 0; i < mapWidth; i++)
                 worldMap[i] = new int[mapWidth];
+            RotateLeft();
+            RotateLeft();
             //dodanie pol
         }
         #endregion
@@ -357,6 +474,28 @@ namespace CsClient
             {
                 energy -= cennikSwiata.moveCost * (1 + (doceloweHeight - obecneHeight) / 100);
                 obecneHeight = doceloweHeight;
+                switch (orientation)
+                {
+                    case Orientation.north:
+                        locationY--;
+                        break;
+                    case Orientation.east:
+                        locationX++;
+                        break;
+                    case Orientation.south:
+                        locationY++;
+                        break;
+                    case Orientation.west:
+                        locationX--;
+                        break;
+                }
+                if (mapMaking)
+                {
+                    if (orientation == Orientation.north)
+                        mapWidth--;
+                    if (orientation == Orientation.south)
+                        mapWidth++;
+                }
                 return true;
             }
             return false;
@@ -364,23 +503,54 @@ namespace CsClient
 
         private static void Look()
         {
+            for (int i = 0; i < lookMatrixW; i++)
+                for (int j = 0; j < lookMatrixW; j++)
+                    lookMatrix[j][i] = " ";
             OrientedField[] pola = agentTomek.Look();
+            int fieldX = 0;
+            int fieldY = 0;
+
             foreach (OrientedField pole in pola)
             {
                 if (pole.x == 0 && pole.y == 1)
                     doceloweHeight = pole.height;
-                Console.WriteLine("-----------------------------");
-                Console.WriteLine("POLE " + pole.x + "," + pole.y);
-                Console.WriteLine("Wysokosc: " + pole.height);
+                switch (orientation)
+                {
+                    case Orientation.north:
+                        fieldX = pole.x + cennikSwiata.sightScope;
+                        fieldY = Math.Abs(pole.y - cennikSwiata.sightScope);
+                        lookMatrix[cennikSwiata.sightScope][cennikSwiata.sightScope] = "^";
+                        break;
+                    case Orientation.west:
+                        fieldY = Math.Abs(pole.x - cennikSwiata.sightScope);
+                        fieldX = Math.Abs(pole.y - cennikSwiata.sightScope);
+                        lookMatrix[cennikSwiata.sightScope][cennikSwiata.sightScope] = "<";
+                        break;
+                    case Orientation.south:
+                        fieldX = -pole.x + cennikSwiata.sightScope;
+                        fieldY = pole.y + cennikSwiata.sightScope;
+                        lookMatrix[cennikSwiata.sightScope][cennikSwiata.sightScope] = "v";
+                        break;
+                    case Orientation.east:
+                        fieldY = pole.x + cennikSwiata.sightScope;
+                        fieldX = pole.y + cennikSwiata.sightScope;
+                        lookMatrix[cennikSwiata.sightScope][cennikSwiata.sightScope] = ">";
+                        break;
+                }
+
+                lookMatrix[fieldX][fieldY] = "_";
                 if (pole.energy != 0)
                 {
-                    Console.WriteLine("Energia: " + pole.energy);
+                    lookMatrix[fieldX][fieldY] = "e";
                     if (pole.energy < 0)
                     {
+                        lookMatrix[fieldX][fieldY] = "i";
                         if (!unfinityEnergyField_1.found)
                         {
                             unfinityEnergyField_1.found = true;
                             unfinityEnergyField_1.Point(pole.x, pole.y);
+                            if (pole.x >= 0 && orientation == Orientation.north)
+                                orientation = Orientation.west;
                             if (orientation == Orientation.north)
                             {
                                 mapWidth -= pole.y;
@@ -396,9 +566,7 @@ namespace CsClient
                         }
                         else if (!unfinityEnergyField_2.found)
                         {
-                            //Poprawic to (orientacja ma wplyw na polozenie)
-                            if ((unfinityEnergyField_2.locationX - locationX) !=0
-                                && (unfinityEnergyField_2.locationY - locationY !=0))
+                            if (locationX * locationX + locationY * locationY > 4)
                             {
                                 unfinityEnergyField_2.found = true;
                                 unfinityEnergyField_2.Point(pole.x, pole.y);
@@ -407,10 +575,18 @@ namespace CsClient
                     }
                 }
                 if (pole.obstacle)
-                    Console.WriteLine("Przeszkoda");
+                    lookMatrix[fieldX][fieldY] = "W";
                 if (pole.agent != null)
+                {
+                    lookMatrix[fieldX][fieldY] = "A";
                     Console.WriteLine("Agent " + pole.agent.fullName + " i jest obrocony na " + pole.agent.direction.ToString());
-                Console.WriteLine("-----------------------------");
+                }
+            }
+            for (int i = 0; i < lookMatrixW; i++)
+            {
+                for (int j = 0; j < lookMatrixW; j++)
+                    Console.Write(lookMatrix[j][i]+" ");
+                Console.WriteLine();
             }
         }
     #endregion
